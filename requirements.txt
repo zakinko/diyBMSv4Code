@@ -1,0 +1,7 @@
+# Build tooling for CI.  Pinned for the same reason platformio.ini pins its platform and
+# libraries: an unpinned "pip install --upgrade platformio" is what silently changed how
+# --project-conf resolves, which broke both build jobs.
+#
+# Unlike lib_deps, this file is watched - Dependabot has a pip ecosystem, so bumping it
+# arrives as a reviewed pull request.
+platformio==6.1.19
