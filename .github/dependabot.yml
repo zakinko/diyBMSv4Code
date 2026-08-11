@@ -1,8 +1,10 @@
 version: 2
 
-# Only the workflows are covered here.  Dependabot has no PlatformIO ecosystem, so the
-# pinned platform, toolchain and lib_deps in ATTINYCellModule/platformio.ini and
-# ESPController/platformio.ini are not watched by anything and have to be moved by hand.
+# The workflow actions and the build tooling in requirements.txt are covered here.
+#
+# Dependabot has no PlatformIO ecosystem, so the pinned platform, toolchain and lib_deps
+# in ATTINYCellModule/platformio.ini and ESPController/platformio.ini are watched by
+# nothing and have to be moved by hand.
 #
 # Note that a fresh clone stopped building precisely because those were left to float,
 # so the pins are deliberate - the answer to them going stale is to bump them and
@@ -10,6 +12,13 @@ version: 2
 
 updates:
   - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "monthly"

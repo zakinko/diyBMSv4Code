@@ -30,10 +30,10 @@ jobs:
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade platformio
+        pip install -r requirements.txt
 
     - name: Build code for modules
-      run: pio run --project-dir=./ATTINYCellModule --project-conf=./ATTINYCellModule/platformio.ini
+      run: pio run --project-dir=./ATTINYCellModule
 
     - name: Publish Artifacts 1
       uses: actions/upload-artifact@v4
@@ -71,10 +71,10 @@ jobs:
     - name: Install PlatformIO
       run: |
         python -m pip install --upgrade pip
-        pip install --upgrade platformio
+        pip install -r requirements.txt
 
     - name: Build code for controller
-      run: pio run --project-dir=./ESPController  --environment esp8266_d1mini --project-conf=./ESPController/platformio.ini
+      run: pio run --project-dir=./ESPController  --environment esp8266_d1mini
 
     - name: Build File System Image for ESP8266
       run: pio run --project-dir=./ESPController --target buildfs --environment esp8266_d1mini
