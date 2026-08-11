@@ -76,17 +76,29 @@ jobs:
     - name: Build code for controller
       run: pio run --project-dir=./ESPController  --environment esp8266_d1mini
 
+    # Each binary is copied out as soon as it is built, because they do not coexist in
+    # .pio/build for long.  PlatformIO empties the environment's build directory when it
+    # installs a package mid-run, and the filesystem image step pulls in mkspiffs and
+    # mklittlefs the first time it runs against a clean ~/.platformio - taking the
+    # firmware binary with it.  That is why this job used to upload twice, which
+    # upload-artifact v4 refuses: it rejects a second upload under a name it has already
+    # seen, where v2 merged them.
+    - name: Stage firmware binary
+      run: |
+        mkdir -p artifacts
+        cp ./ESPController/.pio/build/esp8266_d1mini/diybms_controller_firmware_*.bin artifacts/
+
     - name: Build File System Image for ESP8266
       run: pio run --project-dir=./ESPController --target buildfs --environment esp8266_d1mini
 
-    # Both binaries are published in one step.  upload-artifact v4 rejects a second
-    # upload under a name it has already seen, where v2 merged them, so the firmware
-    # and the filesystem image have to be collected after both have been built.
+    - name: Stage filesystem image
+      run: cp ./ESPController/.pio/build/esp8266_d1mini/diybms_controller_filesystemimage_*.bin artifacts/
+
     - name: Publish Artifacts 2
       uses: actions/upload-artifact@v4
       with:
         name: DIYBMS-Compiled-Controller-ESP8266
-        path: ./ESPController/.pio/build/*/*.bin
+        path: ./artifacts/*.bin
         if-no-files-found: error
 
   job_zip_code:
