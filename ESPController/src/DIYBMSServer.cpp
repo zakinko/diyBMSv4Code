@@ -94,14 +94,14 @@ bool DIYBMSServer::validateXSS(AsyncWebServerRequest *request)
 {
   if (request->hasHeader("Cookie"))
   {
-    AsyncWebHeader *cookie = request->getHeader("Cookie");
+    const AsyncWebHeader *cookie = request->getHeader("Cookie");
     if (cookie->value().startsWith("DIYBMS_XSS="))
     {
       if (cookie->value().substring(11).equals(DIYBMSServer::UUIDString))
       {
         if (request->hasParam("xss", true))
         {
-          AsyncWebParameter *p1 = request->getParam("xss", true);
+          const AsyncWebParameter *p1 = request->getParam("xss", true);
 
           if (p1->value().equals(DIYBMSServer::UUIDString) == true)
           {
@@ -178,13 +178,13 @@ void DIYBMSServer::saveDisplaySetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("VoltageHigh", true))
   {
-    AsyncWebParameter *p1 = request->getParam("VoltageHigh", true);
+    const AsyncWebParameter *p1 = request->getParam("VoltageHigh", true);
     _mysettings->graph_voltagehigh = p1->value().toFloat();
   }
 
   if (request->hasParam("VoltageLow", true))
   {
-    AsyncWebParameter *p1 = request->getParam("VoltageLow", true);
+    const AsyncWebParameter *p1 = request->getParam("VoltageLow", true);
     _mysettings->graph_voltagelow = p1->value().toFloat();
   }
 
@@ -206,7 +206,7 @@ void DIYBMSServer::saveInfluxDBSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("influxEnabled", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxEnabled", true);
+    const AsyncWebParameter *p1 = request->getParam("influxEnabled", true);
     _mysettings->influxdb_enabled = p1->value().equals("on") ? true : false;
   }
   else
@@ -216,31 +216,31 @@ void DIYBMSServer::saveInfluxDBSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("influxPort", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxPort", true);
+    const AsyncWebParameter *p1 = request->getParam("influxPort", true);
     _mysettings->influxdb_httpPort = p1->value().toInt();
   }
 
   if (request->hasParam("influxServer", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxServer", true);
+    const AsyncWebParameter *p1 = request->getParam("influxServer", true);
     p1->value().toCharArray(_mysettings->influxdb_host, sizeof(_mysettings->influxdb_host));
   }
 
   if (request->hasParam("influxDatabase", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxDatabase", true);
+    const AsyncWebParameter *p1 = request->getParam("influxDatabase", true);
     p1->value().toCharArray(_mysettings->influxdb_database, sizeof(_mysettings->influxdb_database));
   }
 
   if (request->hasParam("influxUsername", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxUsername", true);
+    const AsyncWebParameter *p1 = request->getParam("influxUsername", true);
     p1->value().toCharArray(_mysettings->influxdb_user, sizeof(_mysettings->influxdb_user));
   }
 
   if (request->hasParam("influxPassword", true))
   {
-    AsyncWebParameter *p1 = request->getParam("influxPassword", true);
+    const AsyncWebParameter *p1 = request->getParam("influxPassword", true);
     p1->value().toCharArray(_mysettings->influxdb_password, sizeof(_mysettings->influxdb_password));
   }
 
@@ -262,7 +262,7 @@ void DIYBMSServer::saveRuleConfiguration(AsyncWebServerRequest *request)
     name = name + (i + 1);
     if (request->hasParam(name.c_str(), true, false))
     {
-      AsyncWebParameter *p1 = request->getParam(name.c_str(), true, false);
+      const AsyncWebParameter *p1 = request->getParam(name.c_str(), true, false);
       //Default
       _mysettings->relaytype[i] = RelayType::RELAY_STANDARD;
       if (p1->value().equals("Pulse"))
@@ -279,7 +279,7 @@ void DIYBMSServer::saveRuleConfiguration(AsyncWebServerRequest *request)
     name = name + (i + 1);
     if (request->hasParam(name.c_str(), true, false))
     {
-      AsyncWebParameter *p1 = request->getParam(name.c_str(), true, false);
+      const AsyncWebParameter *p1 = request->getParam(name.c_str(), true, false);
       //Default
       _mysettings->rulerelaydefault[i] = RelayState::RELAY_OFF;
       if (p1->value().equals("On"))
@@ -299,7 +299,7 @@ void DIYBMSServer::saveRuleConfiguration(AsyncWebServerRequest *request)
 
     if (request->hasParam(name, true))
     {
-      AsyncWebParameter *p1 = request->getParam(name, true);
+      const AsyncWebParameter *p1 = request->getParam(name, true);
       _mysettings->rulevalue[rule] = p1->value().toInt();
     }
 
@@ -309,7 +309,7 @@ void DIYBMSServer::saveRuleConfiguration(AsyncWebServerRequest *request)
     hname = hname + "hysteresis";
     if (request->hasParam(hname, true))
     {
-      AsyncWebParameter *p1 = request->getParam(hname, true);
+      const AsyncWebParameter *p1 = request->getParam(hname, true);
       _mysettings->rulehysteresis[rule] = p1->value().toInt();
     }
 
@@ -323,7 +323,7 @@ void DIYBMSServer::saveRuleConfiguration(AsyncWebServerRequest *request)
       name = name + (i + 1);
       if (request->hasParam(name, true))
       {
-        AsyncWebParameter *p1 = request->getParam(name, true);
+        const AsyncWebParameter *p1 = request->getParam(name, true);
         _mysettings->rulerelaystate[rule][i] = p1->value().equals("X") ? RELAY_X : p1->value().equals("On") ? RelayState::RELAY_ON : RelayState::RELAY_OFF;
       }
     }
@@ -347,13 +347,13 @@ void DIYBMSServer::saveStorage(AsyncWebServerRequest *request)
 
   if (request->hasParam("loggingEnabled", true))
   {
-    AsyncWebParameter *p1 = request->getParam("loggingEnabled", true);
+    const AsyncWebParameter *p1 = request->getParam("loggingEnabled", true);
     _mysettings->loggingEnabled = p1->value().equals("on") ? true : false;
   }
 
   if (request->hasParam("loggingFreq", true))
   {
-    AsyncWebParameter *p1 = request->getParam("loggingFreq", true);
+    const AsyncWebParameter *p1 = request->getParam("loggingFreq", true);
     _mysettings->loggingFrequencySeconds = p1->value().toInt();
     //Validate
     if (_mysettings->loggingFrequencySeconds < 15 || _mysettings->loggingFrequencySeconds > 600)
@@ -374,26 +374,26 @@ void DIYBMSServer::saveNTP(AsyncWebServerRequest *request)
 
   if (request->hasParam("NTPServer", true))
   {
-    AsyncWebParameter *p1 = request->getParam("NTPServer", true);
+    const AsyncWebParameter *p1 = request->getParam("NTPServer", true);
     p1->value().toCharArray(_mysettings->ntpServer, sizeof(_mysettings->ntpServer));
   }
 
   if (request->hasParam("NTPZoneHour", true))
   {
-    AsyncWebParameter *p1 = request->getParam("NTPZoneHour", true);
+    const AsyncWebParameter *p1 = request->getParam("NTPZoneHour", true);
     _mysettings->timeZone = p1->value().toInt();
   }
 
   if (request->hasParam("NTPZoneMin", true))
   {
-    AsyncWebParameter *p1 = request->getParam("NTPZoneMin", true);
+    const AsyncWebParameter *p1 = request->getParam("NTPZoneMin", true);
     _mysettings->minutesTimeZone = p1->value().toInt();
   }
 
   _mysettings->daylight = false;
   if (request->hasParam("NTPDST", true))
   {
-    AsyncWebParameter *p1 = request->getParam("NTPDST", true);
+    const AsyncWebParameter *p1 = request->getParam("NTPDST", true);
     _mysettings->daylight = p1->value().equals("on") ? true : false;
   }
 
@@ -413,13 +413,13 @@ void DIYBMSServer::saveBankConfiguration(AsyncWebServerRequest *request)
 
   if (request->hasParam("totalSeriesModules", true))
   {
-    AsyncWebParameter *p1 = request->getParam("totalSeriesModules", true);
+    const AsyncWebParameter *p1 = request->getParam("totalSeriesModules", true);
     totalSeriesModules = p1->value().toInt();
   }
 
   if (request->hasParam("totalBanks", true))
   {
-    AsyncWebParameter *p1 = request->getParam("totalBanks", true);
+    const AsyncWebParameter *p1 = request->getParam("totalBanks", true);
     totalBanks = p1->value().toInt();
   }
 
@@ -444,7 +444,7 @@ void DIYBMSServer::saveMQTTSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("mqttEnabled", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttEnabled", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttEnabled", true);
     _mysettings->mqtt_enabled = p1->value().equals("on") ? true : false;
   }
   else
@@ -454,7 +454,7 @@ void DIYBMSServer::saveMQTTSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("mqttTopic", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttTopic", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttTopic", true);
     p1->value().toCharArray(_mysettings->mqtt_topic, sizeof(_mysettings->mqtt_topic));
   }
   else
@@ -464,25 +464,25 @@ void DIYBMSServer::saveMQTTSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("mqttPort", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttPort", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttPort", true);
     _mysettings->mqtt_port = p1->value().toInt();
   }
 
   if (request->hasParam("mqttServer", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttServer", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttServer", true);
     p1->value().toCharArray(_mysettings->mqtt_server, sizeof(_mysettings->mqtt_server));
   }
 
   if (request->hasParam("mqttUsername", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttUsername", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttUsername", true);
     p1->value().toCharArray(_mysettings->mqtt_username, sizeof(_mysettings->mqtt_username));
   }
 
   if (request->hasParam("mqttPassword", true))
   {
-    AsyncWebParameter *p1 = request->getParam("mqttPassword", true);
+    const AsyncWebParameter *p1 = request->getParam("mqttPassword", true);
     p1->value().toCharArray(_mysettings->mqtt_password, sizeof(_mysettings->mqtt_password));
   }
 
@@ -499,10 +499,10 @@ void DIYBMSServer::saveGlobalSetting(AsyncWebServerRequest *request)
   if (request->hasParam("BypassOverTempShutdown", true) && request->hasParam("BypassThresholdmV", true))
   {
 
-    AsyncWebParameter *p1 = request->getParam("BypassOverTempShutdown", true);
+    const AsyncWebParameter *p1 = request->getParam("BypassOverTempShutdown", true);
     _mysettings->BypassOverTempShutdown = p1->value().toInt();
 
-    AsyncWebParameter *p2 = request->getParam("BypassThresholdmV", true);
+    const AsyncWebParameter *p2 = request->getParam("BypassThresholdmV", true);
     _mysettings->BypassThresholdmV = p2->value().toInt();
 
     saveConfiguration();
@@ -541,7 +541,7 @@ void DIYBMSServer::saveSetting(AsyncWebServerRequest *request)
 
   if (request->hasParam("m", true))
   {
-    AsyncWebParameter *module = request->getParam("m", true);
+    const AsyncWebParameter *module = request->getParam("m", true);
     //Will this overflow?
     uint8_t m = module->value().toInt();
 
@@ -568,18 +568,18 @@ void DIYBMSServer::saveSetting(AsyncWebServerRequest *request)
 
       if (request->hasParam("BypassOverTempShutdown", true))
       {
-        AsyncWebParameter *p1 = request->getParam("BypassOverTempShutdown", true);
+        const AsyncWebParameter *p1 = request->getParam("BypassOverTempShutdown", true);
         BypassOverTempShutdown = p1->value().toInt();
       }
 
       if (request->hasParam("BypassThresholdmV", true))
       {
-        AsyncWebParameter *p1 = request->getParam("BypassThresholdmV", true);
+        const AsyncWebParameter *p1 = request->getParam("BypassThresholdmV", true);
         BypassThresholdmV = p1->value().toInt();
       }
       if (request->hasParam("Calib", true))
       {
-        AsyncWebParameter *p1 = request->getParam("Calib", true);
+        const AsyncWebParameter *p1 = request->getParam("Calib", true);
         Calibration = p1->value().toFloat();
       }
 
@@ -788,7 +788,7 @@ void DIYBMSServer::identifyModule(AsyncWebServerRequest *request)
 {
   if (request->hasParam("c", false))
   {
-    AsyncWebParameter *cellid = request->getParam("c", false);
+    const AsyncWebParameter *cellid = request->getParam("c", false);
     uint8_t c = cellid->value().toInt();
 
     if (c > _mysettings->totalNumberOfBanks * _mysettings->totalNumberOfSeriesModules)
@@ -812,7 +812,7 @@ void DIYBMSServer::modules(AsyncWebServerRequest *request)
 {
   if (request->hasParam("c", false))
   {
-    AsyncWebParameter *cellid = request->getParam("c", false);
+    const AsyncWebParameter *cellid = request->getParam("c", false);
     uint8_t c = cellid->value().toInt();
 
     if (c > _mysettings->totalNumberOfBanks * _mysettings->totalNumberOfSeriesModules)
