@@ -579,6 +579,25 @@
         </div>
 
         <div class="region">
+            <h2>Backup &amp; Restore</h2>
+            <p>Saves everything on these settings pages to a file, so a controller can be put back the way it was
+                without working through the forms from memory.</p>
+            <p><strong>Passwords are not included.</strong> The MQTT and InfluxDB passwords, and the WiFi
+                credentials, have to be entered again after restoring. Everything around them is kept.</p>
+            <div class="settings">
+                <div>
+                    <label for="downloadConfig">Backup</label>
+                    <button type="button" id="downloadConfig">Download settings</button>
+                </div>
+                <div>
+                    <label for="restoreFile">Restore from file</label>
+                    <input type="file" id="restoreFile" accept=".json,application/json">
+                </div>
+                <button type="button" id="restoreConfig">Restore settings</button>
+            </div>
+        </div>
+
+        <div class="region">
             <h2>Display Settings</h2>
             <form id="displaySettingForm" method="POST" action="savedisplaysetting.json" autocomplete="off">
                 <div class="settings">

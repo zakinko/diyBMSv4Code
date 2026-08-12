@@ -1054,6 +1054,33 @@ $(function () {
         }
     });
 
+    $("#downloadConfig").click(function () {
+        //Content-Disposition on the response turns this into a save, not a page
+        window.location = "download.json";
+    });
+
+    $("#restoreConfig").click(function () {
+        var file = $("#restoreFile")[0].files[0];
+        if (!file) {
+            $("#saveerror").show().delay(2000).fadeOut(500);
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            //Sent as a form field rather than as an upload, so it goes through
+            //the same cross-site check as every other form on this page
+            $.ajax({
+                type: "POST",
+                url: "restore.json",
+                data: "config=" + encodeURIComponent(e.target.result),
+                success: function () { $("#savesuccess").show().delay(2000).fadeOut(500); },
+                error: function () { $("#saveerror").show().delay(2000).fadeOut(500); }
+            });
+        };
+        reader.readAsText(file);
+    });
+
     $.ajaxSetup({
         beforeSend: function (xhr, settings) { settings.data += '&xss=' + XSS_KEY; }
     });

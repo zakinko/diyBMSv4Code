@@ -367,6 +367,218 @@ void DIYBMSServer::saveStorage(AsyncWebServerRequest *request)
   SendSuccess(request);
 }
 
+// The other half of diyBMSv4Code#124.  The file arrives as a form field rather
+// than as an upload, which keeps it inside the same cross-site check as every
+// other form on the page - a raw body would arrive with no parameters to check.
+void DIYBMSServer::restoreConfiguration(AsyncWebServerRequest *request)
+{
+  if (!validateXSS(request))
+    return;
+
+  if (!request->hasParam("config", true))
+  {
+    SendFailure(request);
+    return;
+  }
+
+  JsonDocument doc;
+  if (deserializeJson(doc, request->getParam("config", true)->value()) != DeserializationError::Ok)
+  {
+    SendFailure(request);
+    return;
+  }
+
+  // Refuse anything that is not one of ours.  A file from a future build could
+  // carry settings this one would silently drop, and half a restore is worse
+  // than none.
+  if (doc["format"].as<uint8_t>() != 1)
+  {
+    SendFailure(request);
+    return;
+  }
+
+  JsonObject settings = doc["settings"];
+
+  // The one combination that would run off the end of cmi[] later
+  uint8_t banks = settings["totalNumberOfBanks"] | _mysettings->totalNumberOfBanks;
+  uint8_t series = settings["totalNumberOfSeriesModules"] | _mysettings->totalNumberOfSeriesModules;
+  if (banks == 0 || series == 0 || (uint16_t)banks * (uint16_t)series > maximum_controller_cell_modules)
+  {
+    SendFailure(request);
+    return;
+  }
+
+  _mysettings->totalNumberOfBanks = banks;
+  _mysettings->totalNumberOfSeriesModules = series;
+  _mysettings->BypassOverTempShutdown = settings["BypassOverTempShutdown"] | _mysettings->BypassOverTempShutdown;
+  _mysettings->BypassThresholdmV = settings["BypassThresholdmV"] | _mysettings->BypassThresholdmV;
+  _mysettings->graph_voltagehigh = settings["graph_voltagehigh"] | _mysettings->graph_voltagehigh;
+  _mysettings->graph_voltagelow = settings["graph_voltagelow"] | _mysettings->graph_voltagelow;
+  _mysettings->timeZone = settings["timeZone"] | _mysettings->timeZone;
+  _mysettings->minutesTimeZone = settings["minutesTimeZone"] | _mysettings->minutesTimeZone;
+  _mysettings->daylight = settings["daylight"] | _mysettings->daylight;
+  _mysettings->loggingEnabled = settings["loggingEnabled"] | _mysettings->loggingEnabled;
+  _mysettings->loggingFrequencySeconds = settings["loggingFrequencySeconds"] | _mysettings->loggingFrequencySeconds;
+  strlcpy(_mysettings->ntpServer, settings["ntpServer"] | _mysettings->ntpServer, sizeof(_mysettings->ntpServer));
+
+  JsonObject mqtt = doc["mqtt"];
+  _mysettings->mqtt_enabled = mqtt["enabled"] | _mysettings->mqtt_enabled;
+  _mysettings->mqtt_port = mqtt["port"] | _mysettings->mqtt_port;
+  strlcpy(_mysettings->mqtt_server, mqtt["server"] | _mysettings->mqtt_server, sizeof(_mysettings->mqtt_server));
+  strlcpy(_mysettings->mqtt_topic, mqtt["topic"] | _mysettings->mqtt_topic, sizeof(_mysettings->mqtt_topic));
+  strlcpy(_mysettings->mqtt_username, mqtt["username"] | _mysettings->mqtt_username, sizeof(_mysettings->mqtt_username));
+
+  JsonObject influxdb = doc["influxdb"];
+  _mysettings->influxdb_enabled = influxdb["enabled"] | _mysettings->influxdb_enabled;
+  _mysettings->influxdb_httpPort = influxdb["httpPort"] | _mysettings->influxdb_httpPort;
+  strlcpy(_mysettings->influxdb_host, influxdb["host"] | _mysettings->influxdb_host, sizeof(_mysettings->influxdb_host));
+  strlcpy(_mysettings->influxdb_database, influxdb["database"] | _mysettings->influxdb_database, sizeof(_mysettings->influxdb_database));
+  strlcpy(_mysettings->influxdb_user, influxdb["user"] | _mysettings->influxdb_user, sizeof(_mysettings->influxdb_user));
+
+  uint8_t r = 0;
+  for (JsonObject rule : doc["rules"].as<JsonArray>())
+  {
+    if (r >= RELAY_RULES)
+      break;
+
+    _mysettings->rulevalue[r] = rule["value"] | _mysettings->rulevalue[r];
+    _mysettings->rulehysteresis[r] = rule["hysteresis"] | _mysettings->rulehysteresis[r];
+
+    uint8_t relay = 0;
+    for (JsonVariant state : rule["relays"].as<JsonArray>())
+    {
+      if (relay >= RELAY_TOTAL)
+        break;
+      _mysettings->rulerelaystate[r][relay] = (RelayState)(state.as<uint8_t>());
+      relay++;
+    }
+    r++;
+  }
+
+  uint8_t relay = 0;
+  for (JsonVariant state : doc["relaydefault"].as<JsonArray>())
+  {
+    if (relay >= RELAY_TOTAL)
+      break;
+    _mysettings->rulerelaydefault[relay] = (RelayState)(state.as<uint8_t>());
+    relay++;
+  }
+
+  relay = 0;
+  for (JsonVariant type : doc["relaytype"].as<JsonArray>())
+  {
+    if (relay >= RELAY_TOTAL)
+      break;
+    _mysettings->relaytype[relay] = (RelayType)(type.as<uint8_t>());
+    relay++;
+  }
+
+  saveConfiguration();
+
+  // The network block lives separately in EEPROM, so it is saved separately too
+  JsonObject network = doc["network"];
+  if (!network.isNull())
+  {
+    ipconfig.manualConfig = network["manualConfig"] | 0;
+    ipconfig.wifi_ip = network["ip"] | 0;
+    ipconfig.wifi_netmask = network["netmask"] | 0;
+    ipconfig.wifi_gateway = network["gateway"] | 0;
+    ipconfig.wifi_dns1 = network["dns1"] | 0;
+    ipconfig.wifi_dns2 = network["dns2"] | 0;
+    Settings::WriteConfigToEEPROM((char *)&ipconfig, sizeof(ipconfig), EEPROM_IPCONFIG_START_ADDRESS);
+  }
+
+  SendSuccess(request);
+}
+
+// diyBMSv4Code#124.  Everything on the settings pages, in one file, so that a
+// controller can be put back the way it was without working through the forms
+// from memory.
+//
+// Passwords are left out on purpose.  The web interface has never handed one
+// back - the two lines that would do it are commented out in the settings
+// response - and a backup file is not a good reason to start, least of all one
+// fetched over plain HTTP.  Everything else round them is kept, so what has to
+// be typed again afterwards is two passwords rather than twelve rules.
+void DIYBMSServer::downloadConfiguration(AsyncWebServerRequest *request)
+{
+  AsyncResponseStream *response = request->beginResponseStream("application/json");
+
+  //Names the file after the controller, so backups from several do not collide
+  char filename[48];
+  sprintf(filename, "attachment; filename=\"diybms-%08X.json\"", ESP.getChipId());
+  response->addHeader("Content-Disposition", filename);
+  response->addHeader("Cache-Control", "no-store");
+
+  JsonDocument doc;
+  JsonObject root = doc.to<JsonObject>();
+
+  //Read back by restoreConfiguration() to refuse a file meant for something else
+  root["format"] = 1;
+  root["controller"] = ESP.getChipId();
+  root["version"] = GIT_VERSION;
+
+  JsonObject settings = root["settings"].to<JsonObject>();
+  settings["totalNumberOfBanks"] = _mysettings->totalNumberOfBanks;
+  settings["totalNumberOfSeriesModules"] = _mysettings->totalNumberOfSeriesModules;
+  settings["BypassOverTempShutdown"] = _mysettings->BypassOverTempShutdown;
+  settings["BypassThresholdmV"] = _mysettings->BypassThresholdmV;
+  settings["graph_voltagehigh"] = _mysettings->graph_voltagehigh;
+  settings["graph_voltagelow"] = _mysettings->graph_voltagelow;
+  settings["timeZone"] = _mysettings->timeZone;
+  settings["minutesTimeZone"] = _mysettings->minutesTimeZone;
+  settings["daylight"] = _mysettings->daylight;
+  settings["ntpServer"] = _mysettings->ntpServer;
+  settings["loggingEnabled"] = _mysettings->loggingEnabled;
+  settings["loggingFrequencySeconds"] = _mysettings->loggingFrequencySeconds;
+
+  JsonObject mqtt = root["mqtt"].to<JsonObject>();
+  mqtt["enabled"] = _mysettings->mqtt_enabled;
+  mqtt["port"] = _mysettings->mqtt_port;
+  mqtt["server"] = _mysettings->mqtt_server;
+  mqtt["topic"] = _mysettings->mqtt_topic;
+  mqtt["username"] = _mysettings->mqtt_username;
+
+  JsonObject influxdb = root["influxdb"].to<JsonObject>();
+  influxdb["enabled"] = _mysettings->influxdb_enabled;
+  influxdb["httpPort"] = _mysettings->influxdb_httpPort;
+  influxdb["host"] = _mysettings->influxdb_host;
+  influxdb["database"] = _mysettings->influxdb_database;
+  influxdb["user"] = _mysettings->influxdb_user;
+
+  JsonObject network = root["network"].to<JsonObject>();
+  network["manualConfig"] = ipconfig.manualConfig;
+  network["ip"] = ipconfig.wifi_ip;
+  network["netmask"] = ipconfig.wifi_netmask;
+  network["gateway"] = ipconfig.wifi_gateway;
+  network["dns1"] = ipconfig.wifi_dns1;
+  network["dns2"] = ipconfig.wifi_dns2;
+
+  JsonArray rules = root["rules"].to<JsonArray>();
+  for (uint8_t r = 0; r < RELAY_RULES; r++)
+  {
+    JsonObject rule = rules.add<JsonObject>();
+    rule["value"] = _mysettings->rulevalue[r];
+    rule["hysteresis"] = _mysettings->rulehysteresis[r];
+    JsonArray relays = rule["relays"].to<JsonArray>();
+    for (uint8_t relay = 0; relay < RELAY_TOTAL; relay++)
+    {
+      relays.add((uint8_t)_mysettings->rulerelaystate[r][relay]);
+    }
+  }
+
+  JsonArray relaydefault = root["relaydefault"].to<JsonArray>();
+  JsonArray relaytype = root["relaytype"].to<JsonArray>();
+  for (uint8_t relay = 0; relay < RELAY_TOTAL; relay++)
+  {
+    relaydefault.add((uint8_t)_mysettings->rulerelaydefault[relay]);
+    relaytype.add((uint8_t)_mysettings->relaytype[relay]);
+  }
+
+  serializeJson(doc, *response);
+  request->send(response);
+}
+
 // diyBMSv4Code#105.  An address handed out by DHCP is fine until the controller
 // is something other things point at - a dashboard, an MQTT bridge, a bookmark -
 // and then it moving is a nuisance.
@@ -1514,6 +1726,8 @@ void DIYBMSServer::StartServer(AsyncWebServer *webserver,
   _myserver->on("/saverules.json", HTTP_POST, DIYBMSServer::saveRuleConfiguration);
   _myserver->on("/saventp.json", HTTP_POST, DIYBMSServer::saveNTP);
   _myserver->on("/savenetwork.json", HTTP_POST, DIYBMSServer::saveNetwork);
+  _myserver->on("/download.json", HTTP_GET, DIYBMSServer::downloadConfiguration);
+  _myserver->on("/restore.json", HTTP_POST, DIYBMSServer::restoreConfiguration);
   _myserver->on("/savedisplaysetting.json", HTTP_POST, DIYBMSServer::saveDisplaySetting);
   _myserver->on("/savestorage.json", HTTP_POST, DIYBMSServer::saveStorage);
 

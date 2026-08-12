@@ -86,6 +86,8 @@ private:
     static void saveRuleConfiguration(AsyncWebServerRequest *request);
     static void saveNTP(AsyncWebServerRequest *request);
     static void saveNetwork(AsyncWebServerRequest *request);
+    static void downloadConfiguration(AsyncWebServerRequest *request);
+    static void restoreConfiguration(AsyncWebServerRequest *request);
     static void saveStorage(AsyncWebServerRequest *request);
 
     static void saveDisplaySetting(AsyncWebServerRequest *request);
