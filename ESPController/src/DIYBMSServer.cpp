@@ -581,6 +581,17 @@ void DIYBMSServer::saveSetting(AsyncWebServerRequest *request)
       {
         const AsyncWebParameter *p1 = request->getParam("Calib", true);
         Calibration = p1->value().toFloat();
+
+        // The module keeps anything at or above MODULE_CALIBRATION_MINIMUM and
+        // replaces the rest with its own default the next time it validates its
+        // configuration.  Sending a lower value therefore looks like it worked -
+        // readings even change to match - until the module restarts and reverts,
+        // which is a long way from the mistake.  Refuse it here instead.
+        if (Calibration < MODULE_CALIBRATION_MINIMUM || Calibration >= MODULE_SETTING_UNCHANGED)
+        {
+          SendFailure(request);
+          return;
+        }
       }
 
       _prg->sendSaveSetting(m, BypassThresholdmV, BypassOverTempShutdown, Calibration);

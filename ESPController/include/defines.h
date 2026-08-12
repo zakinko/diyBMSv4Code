@@ -21,6 +21,14 @@
 //This also needs changing in default.htm (MAXIMUM_NUMBER_OF_BANKS)
 #define maximum_number_of_banks 16
 
+//Lowest voltage calibration multiplier the module firmware will keep.  Anything
+//below this is replaced with the module's own default the next time it validates
+//its configuration, so it is used until the module restarts and then quietly
+//thrown away - see ValidateConfiguration() in ATTINYCellModule.  0xFFFF is the
+//separate "leave this setting alone" value the module looks for.
+#define MODULE_CALIBRATION_MINIMUM 1.9f
+#define MODULE_SETTING_UNCHANGED 0xFFFF
+
 //Version 4.XX of DIYBMS modules operate at 2400 baud
 //#define COMMS_BAUD_RATE 2400
 
