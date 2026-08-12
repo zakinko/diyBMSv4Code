@@ -1,12 +1,38 @@
-# diyBMS v4
+# diyBMS v4 — ESP8266 controller, maintained fork
+
+*[日本語版 README](README.ja.md)*
 
 Version 4 of the diyBMS.  Do-it-yourself battery management system for Lithium ion battery packs and cells
 
+THIS REPOSITORY IS FOR THE ESP8266 BASED CONTROLLER BOARD, with V4.00 to V4.40 modules
+
+This is a fork of [stuartpittaway/diyBMSv4Code](https://github.com/stuartpittaway/diyBMSv4Code),
+kept building for people who are still running that hardware.  Upstream marked it
+ORIGINAL/LEGACY and moved development to the ESP32 based
+[diyBMSv4ESP32](https://github.com/stuartpittaway/diyBMSv4ESP32); its last commit was May
+2022, and since then a fresh clone stopped compiling and CI stopped running altogether.
+Both work again here.
+
+**What is maintained**
+
+* It builds from a clean checkout, and CI checks that on every push
+* Releases are rebuilt from source, so there is a current ZIP to download
+* Dependencies are pinned, because leaving them to float is what broke the build - they are
+  moved forward deliberately, to the newest revision that still compiles
+
+**What is not**
+
+* **Not tested on hardware.**  There is no ESP8266 controller here to flash, so the firmware
+  is verified to build and no further.  Reports from anyone running it are very welcome -
+  please open an issue
+* Not a place where new features are being developed.  For that, the ESP32 version above is
+  where the work is happening, and it also covers V4.00 to V4.50 modules
+
+Nothing in the firmware's behaviour has been changed - everything so far is about keeping
+the code buildable.  The branch `ci-baseline-upstream-master` holds upstream's master
+unchanged, if you want to compare.
+
 If you are looking for version 3 of this project take a look here https://github.com/stuartpittaway/diyBMS
-
-THIS REPOSITORY IS FOR THE ESP8266 BASED CONTROLLER BOARD (ORIGINAL/LEGACY)
-
-The newest ESP32 based code can be found here https://github.com/stuartpittaway/diyBMSv4ESP32
 
 
 # Support the project
@@ -36,11 +62,11 @@ If you discover a bug or want to make a feature suggestion, open a Github issue
 
 # How to use the code
 
-![Master Branch](https://github.com/stuartpittaway/diyBMSv4Code/workflows/PlatformIO%20CI/badge.svg?branch=master)
+[![PlatformIO CI](https://github.com/zakinko/diyBMSv4Code/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/zakinko/diyBMSv4Code/actions/workflows/main.yml)
 
 This release removes the need to manually compile the code yourself, instead GITHUB Actions are now used to build the code for you automatically.
 
-The files you will need are held as a ZIP file in [Releases](https://github.com/stuartpittaway/diyBMSv4Code/releases)
+The files you will need are held as a ZIP file in [Releases](https://github.com/zakinko/diyBMSv4Code/releases)
 
 Download the ZIP file named "Compiled_Firmware_YYYY-MM-DD-HH-MM.zip" and *extract its contents* and inside the folder you should find:
 
