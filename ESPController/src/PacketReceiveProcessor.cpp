@@ -12,8 +12,6 @@ bool PacketReceiveProcessor::ProcessReply(PacketStruct *receivebuffer)
 {
   packetsReceived++;
 
-  //TODO: VALIDATE REPLY START/END RANGES ARE VALID TO AVOID MEMORY BUFFER OVERRUNS
-
   // Copy to our buffer (probably don't need to do this), just use pointer instead
   memcpy(&_packetbuffer, receivebuffer, sizeof(_packetbuffer));
 
@@ -41,6 +39,26 @@ bool PacketReceiveProcessor::ProcessReply(PacketStruct *receivebuffer)
 
     if (ReplyWasProcessedByAModule())
     {
+      // Every handler below walks cmi[] from start_address to end_address and
+      // steps through moduledata[] alongside it.  Both ends arrive over the
+      // wire, and a module recalculates the CRC after incrementing hops, so a
+      // faulty one hands back a range that passes the checksum and still runs
+      // off the end of either array.  cmi[] holds maximum_controller_cell_modules
+      // entries and moduledata[] maximum_cell_modules_per_packet, so the range
+      // has to sit inside the first and span no more than the second.
+      if (_packetbuffer.start_address > _packetbuffer.end_address ||
+          _packetbuffer.end_address >= maximum_controller_cell_modules ||
+          (_packetbuffer.end_address - _packetbuffer.start_address) >= maximum_cell_modules_per_packet)
+      {
+        totalNotProcessedErrors++;
+#if defined(PACKET_LOGGING_RECEIVE)
+        SERIAL_DEBUG.print(F("*BAD RANGE* "));
+        SERIAL_DEBUG.print(_packetbuffer.start_address);
+        SERIAL_DEBUG.print('-');
+        SERIAL_DEBUG.println(_packetbuffer.end_address);
+#endif
+        return false;
+      }
 
       switch (ReplyForCommand())
       {
