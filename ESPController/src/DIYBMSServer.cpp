@@ -367,6 +367,63 @@ void DIYBMSServer::saveStorage(AsyncWebServerRequest *request)
   SendSuccess(request);
 }
 
+// diyBMSv4Code#105.  An address handed out by DHCP is fine until the controller
+// is something other things point at - a dashboard, an MQTT bridge, a bookmark -
+// and then it moving is a nuisance.
+//
+// The configuration is stored on its own rather than alongside the WiFi
+// credentials, so that a controller updated to this build keeps the credentials
+// it already had.  See EEPROM_IPCONFIG_START_ADDRESS.
+void DIYBMSServer::saveNetwork(AsyncWebServerRequest *request)
+{
+  if (!validateXSS(request))
+    return;
+
+  IPAddress ip, netmask, gateway, dns1, dns2;
+
+  // An address that is missing or will not parse is how the form asks for DHCP
+  bool staticAddress = request->hasParam("new_ip", true) &&
+                       ip.fromString(request->getParam("new_ip", true)->value());
+
+  if (!staticAddress)
+  {
+    memset(&ipconfig, 0, sizeof(ipconfig));
+  }
+  else
+  {
+    // A static address with no netmask, no gateway or no name server gets the
+    // controller onto the network and no further.  Half of it is not worth
+    // storing, and finding out by losing the web interface would be a poor way
+    // to be told.
+    if (!(request->hasParam("new_netmask", true) && netmask.fromString(request->getParam("new_netmask", true)->value())) ||
+        !(request->hasParam("new_gateway", true) && gateway.fromString(request->getParam("new_gateway", true)->value())) ||
+        !(request->hasParam("new_dns1", true) && dns1.fromString(request->getParam("new_dns1", true)->value())))
+    {
+      SendFailure(request);
+      return;
+    }
+
+    // A second name server is optional
+    if (!(request->hasParam("new_dns2", true) && dns2.fromString(request->getParam("new_dns2", true)->value())))
+    {
+      dns2 = IPAddress((uint32_t)0);
+    }
+
+    ipconfig.manualConfig = 1;
+    ipconfig.wifi_ip = ip;
+    ipconfig.wifi_netmask = netmask;
+    ipconfig.wifi_gateway = gateway;
+    ipconfig.wifi_dns1 = dns1;
+    ipconfig.wifi_dns2 = dns2;
+  }
+
+  Settings::WriteConfigToEEPROM((char *)&ipconfig, sizeof(ipconfig), EEPROM_IPCONFIG_START_ADDRESS);
+
+  // Takes effect on the next connection - saying so is left to the page, which
+  // has somewhere to put the words
+  SendSuccess(request);
+}
+
 void DIYBMSServer::saveNTP(AsyncWebServerRequest *request)
 {
   if (!validateXSS(request))
@@ -722,6 +779,19 @@ void DIYBMSServer::settings(AsyncWebServerRequest *request)
   settings["TimeZone"] = _mysettings->timeZone;
   settings["MinutesTimeZone"] = _mysettings->minutesTimeZone;
   settings["DST"] = _mysettings->daylight;
+
+  //Blank rather than 0.0.0.0 when on DHCP, so the form comes up empty and
+  //saving it unchanged does not turn DHCP into a static 0.0.0.0
+  settings["manualConfig"] = ipconfig.manualConfig;
+  settings["wifi_ip"] = ipconfig.manualConfig ? IPAddress(ipconfig.wifi_ip).toString() : String();
+  settings["wifi_netmask"] = ipconfig.manualConfig ? IPAddress(ipconfig.wifi_netmask).toString() : String();
+  settings["wifi_gateway"] = ipconfig.manualConfig ? IPAddress(ipconfig.wifi_gateway).toString() : String();
+  settings["wifi_dns1"] = ipconfig.manualConfig ? IPAddress(ipconfig.wifi_dns1).toString() : String();
+  settings["wifi_dns2"] = (ipconfig.manualConfig && ipconfig.wifi_dns2) ? IPAddress(ipconfig.wifi_dns2).toString() : String();
+
+  //What the controller is actually using, which is not the same thing while a
+  //saved static address is waiting for the next reconnection
+  settings["current_ip"] = WiFi.localIP().toString();
 
   settings["FreeHeap"] = ESP.getFreeHeap();
   settings["FreeBlockSize"] = ESP.getMaxFreeBlockSize();
@@ -1443,6 +1513,7 @@ void DIYBMSServer::StartServer(AsyncWebServer *webserver,
   _myserver->on("/savebankconfig.json", HTTP_POST, DIYBMSServer::saveBankConfiguration);
   _myserver->on("/saverules.json", HTTP_POST, DIYBMSServer::saveRuleConfiguration);
   _myserver->on("/saventp.json", HTTP_POST, DIYBMSServer::saveNTP);
+  _myserver->on("/savenetwork.json", HTTP_POST, DIYBMSServer::saveNetwork);
   _myserver->on("/savedisplaysetting.json", HTTP_POST, DIYBMSServer::saveDisplaySetting);
   _myserver->on("/savestorage.json", HTTP_POST, DIYBMSServer::saveStorage);
 

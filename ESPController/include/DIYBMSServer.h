@@ -85,6 +85,7 @@ private:
     static void saveBankConfiguration(AsyncWebServerRequest *request);
     static void saveRuleConfiguration(AsyncWebServerRequest *request);
     static void saveNTP(AsyncWebServerRequest *request);
+    static void saveNetwork(AsyncWebServerRequest *request);
     static void saveStorage(AsyncWebServerRequest *request);
 
     static void saveDisplaySetting(AsyncWebServerRequest *request);

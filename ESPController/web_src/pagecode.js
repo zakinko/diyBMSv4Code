@@ -786,6 +786,13 @@ $(function () {
         $.getJSON("settings.json",
             function (data) {
 
+                $("#current_ip").html(data.settings.current_ip);
+                $("#new_ip").val(data.settings.wifi_ip);
+                $("#new_netmask").val(data.settings.wifi_netmask);
+                $("#new_gateway").val(data.settings.wifi_gateway);
+                $("#new_dns1").val(data.settings.wifi_dns1);
+                $("#new_dns2").val(data.settings.wifi_dns2);
+
                 $("#NTPServer").val(data.settings.NTPServerName);
                 $("#NTPZoneHour").val(data.settings.TimeZone);
                 $("#NTPZoneMin").val(data.settings.MinutesTimeZone);

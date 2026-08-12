@@ -545,6 +545,40 @@
         </div>
 
         <div class="region">
+            <h2>Network</h2>
+            <p>The controller is using <span id="current_ip"></span>. Leave the IP address blank to use DHCP, which
+                is the default. A fixed address takes effect the next time the controller connects - use "Restart
+                controller" below to apply it now.</p>
+            <p><strong>Set these wrongly and the web interface becomes unreachable.</strong> Hold the WIFI RST button
+                to clear the WiFi settings and start again from the access point.</p>
+            <form id="networkForm" method="POST" action="savenetwork.json" autocomplete="off">
+                <div class="settings">
+                    <div>
+                        <label for="new_ip">IP address (blank for DHCP)</label>
+                        <input type="input" name="new_ip" id="new_ip" value="" maxlength="15" pattern="^$|^(\d{1,3}\.){3}\d{1,3}$">
+                    </div>
+                    <div>
+                        <label for="new_netmask">Subnet mask</label>
+                        <input type="input" name="new_netmask" id="new_netmask" value="" maxlength="15" pattern="^$|^(\d{1,3}\.){3}\d{1,3}$">
+                    </div>
+                    <div>
+                        <label for="new_gateway">Gateway</label>
+                        <input type="input" name="new_gateway" id="new_gateway" value="" maxlength="15" pattern="^$|^(\d{1,3}\.){3}\d{1,3}$">
+                    </div>
+                    <div>
+                        <label for="new_dns1">DNS server</label>
+                        <input type="input" name="new_dns1" id="new_dns1" value="" maxlength="15" pattern="^$|^(\d{1,3}\.){3}\d{1,3}$">
+                    </div>
+                    <div>
+                        <label for="new_dns2">DNS server (second, optional)</label>
+                        <input type="input" name="new_dns2" id="new_dns2" value="" maxlength="15" pattern="^$|^(\d{1,3}\.){3}\d{1,3}$">
+                    </div>
+                    <input type="submit" value="Save network settings" />
+                </div>
+            </form>
+        </div>
+
+        <div class="region">
             <h2>Display Settings</h2>
             <form id="displaySettingForm" method="POST" action="savedisplaysetting.json" autocomplete="off">
                 <div class="settings">

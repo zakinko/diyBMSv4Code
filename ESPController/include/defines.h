@@ -34,6 +34,26 @@
 
 #define EEPROM_SETTINGS_START_ADDRESS 256
 
+//Static network configuration is kept in a block of its own rather than added to
+//either structure already stored in EEPROM.  Growing one of those would move its
+//checksum, so the settings saved by an earlier build would stop validating and
+//the controller would come up with no WiFi credentials and factory defaults -
+//a bad trade for a feature nobody had yet.  The main settings block ends at 834
+//(256 + 576 + 2), so this sits above it with room to spare inside the 1024 bytes
+//that EEPROM.begin() reserves.
+#define EEPROM_IPCONFIG_START_ADDRESS 850
+
+struct ip_eeprom_settings
+{
+  //Zero means DHCP, which is what an unwritten or unreadable block reads as
+  uint8_t manualConfig;
+  uint32_t wifi_ip;
+  uint32_t wifi_netmask;
+  uint32_t wifi_gateway;
+  uint32_t wifi_dns1;
+  uint32_t wifi_dns2;
+};
+
 enum enumInputState : uint8_t
 {
   INPUT_HIGH = 0xFF,
@@ -216,5 +236,6 @@ struct sdcard_info
 
 //This holds all the cell information in a large array array
 extern CellModuleInfo cmi[maximum_controller_cell_modules];
+extern ip_eeprom_settings ipconfig;
 
 #endif

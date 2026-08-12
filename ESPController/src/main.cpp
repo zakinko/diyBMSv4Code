@@ -63,6 +63,7 @@ Rules rules;
 
 bool _sd_card_installed = false;
 diybms_eeprom_settings mysettings;
+ip_eeprom_settings ipconfig;
 uint16_t ConfigHasChanged = 0;
 
 uint16_t TotalNumberOfCells() { return mysettings.totalNumberOfBanks * mysettings.totalNumberOfSeriesModules; }
@@ -646,6 +647,21 @@ WiFi.status() only returns:
 
   WiFi.mode(WIFI_STA);
 
+  //Has to come before begin() - config() after a connection has started is
+  //ignored, and the DHCP lease is what ends up in use
+  if (ipconfig.manualConfig)
+  {
+    if (!WiFi.config(IPAddress(ipconfig.wifi_ip),
+                     IPAddress(ipconfig.wifi_gateway),
+                     IPAddress(ipconfig.wifi_netmask),
+                     IPAddress(ipconfig.wifi_dns1),
+                     IPAddress(ipconfig.wifi_dns2)))
+    {
+      //Nothing to fall back to but DHCP, and saying so beats a silent switch
+      SERIAL_DEBUG.println(F("Static IP rejected, using DHCP"));
+    }
+  }
+
   char hostname[40];
 
   sprintf(hostname, "DIYBMS-%08X", ESP.getChipId());
@@ -1112,6 +1128,16 @@ void onMqttConnect(bool sessionPresent)
   myTimerSendMqttStatus.attach(25, sendMqttStatus);
 }
 
+void LoadIPConfiguration()
+{
+  if (Settings::ReadConfigFromEEPROM((char *)&ipconfig, sizeof(ipconfig), EEPROM_IPCONFIG_START_ADDRESS))
+    return;
+
+  //Nothing saved, or saved by a build that did not have this block.  All zeroes
+  //is DHCP, which is how the controller has always behaved.
+  memset(&ipconfig, 0, sizeof(ipconfig));
+}
+
 void LoadConfiguration()
 {
   if (Settings::ReadConfigFromEEPROM((char *)&mysettings, sizeof(mysettings), EEPROM_SETTINGS_START_ADDRESS))
@@ -1473,6 +1499,7 @@ void setup()
   }
 
   LoadConfiguration();
+  LoadIPConfiguration();
 
   //Force logging off for ESP8266
   mysettings.loggingEnabled = false;
