@@ -924,7 +924,7 @@ void sendMqttStatus()
 
   char topic[80];
   char jsonbuffer[220];
-  DynamicJsonDocument doc(220);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["banks"] = mysettings.totalNumberOfBanks;
@@ -1013,7 +1013,7 @@ void sendMqttPacket()
 
   char topic[80];
   char jsonbuffer[200];
-  StaticJsonDocument<200> doc;
+  JsonDocument doc;
 
   //If the BMS is in error, stop sending MQTT packets for the data
   if (!rules.rule_outcome[Rule::BMSError])

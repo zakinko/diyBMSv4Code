@@ -118,7 +118,7 @@ bool DIYBMSServer::validateXSS(AsyncWebServerRequest *request)
 void DIYBMSServer::SendSuccess(AsyncWebServerRequest *request)
 {
   AsyncResponseStream *response = request->beginResponseStream("application/json");
-  StaticJsonDocument<100> doc;
+  JsonDocument doc;
   doc["success"] = true;
   serializeJson(doc, *response);
   request->send(response);
@@ -614,7 +614,7 @@ void DIYBMSServer::GetRules(AsyncWebServerRequest *request)
   AsyncResponseStream *response =
       request->beginResponseStream("application/json");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
   root["timenow"] = (hour() * 60) + minute();
@@ -623,7 +623,7 @@ void DIYBMSServer::GetRules(AsyncWebServerRequest *request)
   root["InputsEnabled"] = InputsEnabled;
   root["ControlState"] = (*_controlState);
 
-  JsonArray defaultArray = root.createNestedArray("relaydefault");
+  JsonArray defaultArray = root["relaydefault"].to<JsonArray>();
   for (uint8_t relay = 0; relay < RELAY_TOTAL; relay++)
   {
     switch (_mysettings->rulerelaydefault[relay])
@@ -640,7 +640,7 @@ void DIYBMSServer::GetRules(AsyncWebServerRequest *request)
     }
   }
 
-  JsonArray typeArray = root.createNestedArray("relaytype");
+  JsonArray typeArray = root["relaytype"].to<JsonArray>();
   for (uint8_t relay = 0; relay < RELAY_TOTAL; relay++)
   {
     switch (_mysettings->relaytype[relay])
@@ -657,15 +657,15 @@ void DIYBMSServer::GetRules(AsyncWebServerRequest *request)
     }
   }
 
-  JsonArray bankArray = root.createNestedArray("rules");
+  JsonArray bankArray = root["rules"].to<JsonArray>();
 
   for (uint8_t r = 0; r < RELAY_RULES; r++)
   {
-    JsonObject rule = bankArray.createNestedObject();
+    JsonObject rule = bankArray.add<JsonObject>();
     rule["value"] = _mysettings->rulevalue[r];
     rule["hysteresis"] = _mysettings->rulehysteresis[r];
     rule["triggered"] = _rules->rule_outcome[r];
-    JsonArray data = rule.createNestedArray("relays");
+    JsonArray data = rule["relays"].to<JsonArray>();
 
     for (uint8_t relay = 0; relay < RELAY_TOTAL; relay++)
     {
@@ -693,10 +693,10 @@ void DIYBMSServer::settings(AsyncWebServerRequest *request)
   AsyncResponseStream *response =
       request->beginResponseStream("application/json");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
-  JsonObject settings = root.createNestedObject("settings");
+  JsonObject settings = root["settings"].to<JsonObject>();
 
   //settings["Version"] = String(GIT_VERSION);
   //settings["CompileDate"] = String(COMPILE_DATE_TIME);
@@ -728,10 +728,10 @@ void DIYBMSServer::storage(AsyncWebServerRequest *request)
   AsyncResponseStream *response =
       request->beginResponseStream("application/json");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
-  JsonObject settings = root.createNestedObject("storage");
+  JsonObject settings = root["storage"].to<JsonObject>();
 
   settings["enabled"] = _mysettings->loggingEnabled;
   settings["frequency"] = _mysettings->loggingFrequencySeconds;
@@ -759,10 +759,10 @@ void DIYBMSServer::integration(AsyncWebServerRequest *request)
   AsyncResponseStream *response =
       request->beginResponseStream("application/json");
 
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   JsonObject root = doc.to<JsonObject>();
 
-  JsonObject mqtt = root.createNestedObject("mqtt");
+  JsonObject mqtt = root["mqtt"].to<JsonObject>();
   mqtt["enabled"] = _mysettings->mqtt_enabled;
   mqtt["topic"] = _mysettings->mqtt_topic;
   mqtt["port"] = _mysettings->mqtt_port;
@@ -771,7 +771,7 @@ void DIYBMSServer::integration(AsyncWebServerRequest *request)
   //We don't output the password in the json file as this could breach security
   //mqtt["password"] =_mysettings->mqtt_password;
 
-  JsonObject influxdb = root.createNestedObject("influxdb");
+  JsonObject influxdb = root["influxdb"].to<JsonObject>();
   influxdb["enabled"] = _mysettings->influxdb_enabled;
   influxdb["port"] = _mysettings->influxdb_httpPort;
   influxdb["server"] = _mysettings->influxdb_host;
@@ -828,9 +828,9 @@ void DIYBMSServer::modules(AsyncWebServerRequest *request)
 
     AsyncResponseStream *response = request->beginResponseStream("application/json");
 
-    DynamicJsonDocument doc(2048);
+    JsonDocument doc;
     JsonObject root = doc.to<JsonObject>();
-    JsonObject settings = root.createNestedObject("settings");
+    JsonObject settings = root["settings"].to<JsonObject>();
 
     uint8_t b = c / _mysettings->totalNumberOfSeriesModules;
     uint8_t m = c - (b * _mysettings->totalNumberOfSeriesModules);
@@ -867,7 +867,6 @@ void DIYBMSServer::handleRestartController(AsyncWebServerRequest *request)
 
 void DIYBMSServer::monitor3(AsyncWebServerRequest *request)
 {
-  //DynamicJsonDocument doc(maximum_controller_cell_modules * 50);
   AsyncResponseStream *response = request->beginResponseStream("application/json");
 
   uint8_t totalModules = _mysettings->totalNumberOfBanks * _mysettings->totalNumberOfSeriesModules;
