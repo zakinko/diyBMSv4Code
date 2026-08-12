@@ -932,6 +932,15 @@ static bool publishJsonDocument(const char *topic, JsonDocument &doc, char *buff
 {
   size_t length = serializeJson(doc, buffer, buffersize);
 
+  // The document has done its job, so let go of its memory before publish() goes
+  // looking for a contiguous block.  An ArduinoJson 7 pool is 1024 bytes here -
+  // 128 slots of 8, measured with this toolchain - and publish() drops the
+  // message when getMaxFreeBlockSize() falls short of what it needs plus 4096,
+  // so holding one across the call is not free.  Every caller rebuilds the
+  // document from clear() before its next use, so nothing is lost by doing it
+  // here rather than there.
+  doc.clear();
+
   if (length >= buffersize)
   {
     // Terminate it ourselves - serializeJson had no room to
