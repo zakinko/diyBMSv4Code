@@ -917,6 +917,34 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason)
   }
 }
 
+// Serialise doc into buffer and publish it under topic.
+//
+// serializeJson() truncates rather than failing when the buffer is too small, and
+// only writes the null terminator if there is room for it - the same caveat as
+// strncpy().  The publish overload that takes no length calls strlen() on the
+// payload, so a document that exactly filled the buffer would be read past its
+// end.  Passing the length explicitly removes that.
+//
+// A payload that did not fit is dropped rather than sent, because half a JSON
+// object is worse for a subscriber than a missing message, and it says so - this
+// should never happen, and finding out by looking at the data would be worse.
+static bool publishJsonDocument(const char *topic, JsonDocument &doc, char *buffer, size_t buffersize)
+{
+  size_t length = serializeJson(doc, buffer, buffersize);
+
+  if (length >= buffersize)
+  {
+    // Terminate it ourselves - serializeJson had no room to
+    buffer[buffersize - 1] = 0;
+    SERIAL_DEBUG.print(F("MQTT payload did not fit, dropped: "));
+    SERIAL_DEBUG.println(topic);
+    return false;
+  }
+
+  mqttClient.publish(topic, 0, false, buffer, length);
+  return true;
+}
+
 void sendMqttStatus()
 {
   if (!mysettings.mqtt_enabled && !mqttClient.connected())
@@ -940,9 +968,8 @@ void sendMqttStatus()
   root["oos"] = receiveProc.totalOutofSequenceErrors;
   root["roundtrip"] = receiveProc.packetTimerMillisecond;
 
-  serializeJson(doc, jsonbuffer, sizeof(jsonbuffer));
   sprintf(topic, "%s/status", mysettings.mqtt_topic);
-  mqttClient.publish(topic, 0, false, jsonbuffer);
+  publishJsonDocument(topic, doc, jsonbuffer, sizeof(jsonbuffer));
 #if defined(MQTT_LOGGING)
   SERIAL_DEBUG.print("MQTT - ");
   SERIAL_DEBUG.print(topic);
@@ -955,9 +982,8 @@ void sendMqttStatus()
     doc.clear();
     doc["voltage"] = (float)rules.packvoltage[bank] / (float)1000.0;
 
-    serializeJson(doc, jsonbuffer, sizeof(jsonbuffer));
     sprintf(topic, "%s/bank/%d", mysettings.mqtt_topic, bank);
-    mqttClient.publish(topic, 0, false, jsonbuffer);
+    publishJsonDocument(topic, doc, jsonbuffer, sizeof(jsonbuffer));
 #if defined(MQTT_LOGGING)
     SERIAL_DEBUG.print("MQTT - ");
     SERIAL_DEBUG.print(topic);
@@ -973,14 +999,13 @@ void sendMqttStatus()
   {
     doc[(String)i] = rules.rule_outcome[i] ? 1 : 0; // String conversion should be removed but just quick to get json format nice
   }
-  serializeJson(doc, jsonbuffer, sizeof(jsonbuffer));
+  publishJsonDocument(topic, doc, jsonbuffer, sizeof(jsonbuffer));
 #if defined(MQTT_LOGGING)
   SERIAL_DEBUG.print("MQTT - ");
   SERIAL_DEBUG.print(topic);
   SERIAL_DEBUG.print('=');
   SERIAL_DEBUG.println(jsonbuffer);
 #endif
-  mqttClient.publish(topic, 0, false, jsonbuffer);
 
   doc.clear(); // Need to clear the json object for next message
   sprintf(topic, "%s/output", mysettings.mqtt_topic);
@@ -989,14 +1014,13 @@ void sendMqttStatus()
     doc[(String)i] = (previousRelayState[i] == RelayState::RELAY_ON) ? 1 : 0;
   }
 
-  serializeJson(doc, jsonbuffer, sizeof(jsonbuffer));
+  publishJsonDocument(topic, doc, jsonbuffer, sizeof(jsonbuffer));
 #if defined(MQTT_LOGGING)
   SERIAL_DEBUG.print("MQTT - ");
   SERIAL_DEBUG.print(topic);
   SERIAL_DEBUG.print('=');
   SERIAL_DEBUG.println(jsonbuffer);
 #endif
-  mqttClient.publish(topic, 0, false, jsonbuffer);
 }
 
 //Send a few MQTT packets and keep track so we send the next batch on following calls
@@ -1038,11 +1062,9 @@ void sendMqttPacket()
         doc["bypassT"] = cmi[i].bypassOverTemp ? 1 : 0;
         doc["bpc"] = cmi[i].badPacketCount;
         doc["mAh"] = cmi[i].BalanceCurrentCount;
-        serializeJson(doc, jsonbuffer, sizeof(jsonbuffer));
-
         sprintf(topic, "%s/%d/%d", mysettings.mqtt_topic, bank, module);
 
-        mqttClient.publish(topic, 0, false, jsonbuffer);
+        publishJsonDocument(topic, doc, jsonbuffer, sizeof(jsonbuffer));
 
 #if defined(MQTT_LOGGING)
         SERIAL_DEBUG.print("MQTT - ");
